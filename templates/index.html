@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="theme-color" content="#080b14"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <title>Suhail AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+    :root {
+      --bg:#080b14; --surface:#0e1320; --surface2:#141926;
+      --border:rgba(99,179,237,0.12); --accent:#63b3ed; --accent2:#9f7aea;
+      --text:#e8edf5; --muted:#6b7a99;
+      --bubble-user:linear-gradient(135deg,#1a3a5c,#1e4976);
+      --bubble-ai:#111827; --gold:#f6c90e; --danger:#fc5c65;
+      --safe-bottom:env(safe-area-inset-bottom,0px);
+    }
+    html,body { height:100%; height:-webkit-fill-available; font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); overflow:hidden; }
+    body::before {
+      content:''; position:fixed; inset:0; z-index:0;
+      background:
+        radial-gradient(ellipse 60% 40% at 10% 10%,rgba(99,179,237,0.07) 0%,transparent 70%),
+        radial-gradient(ellipse 40% 60% at 90% 80%,rgba(159,122,234,0.08) 0%,transparent 70%);
+      pointer-events:none;
+    }
+
+    @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes pulse  { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-5px)} }
+    @keyframes wave   { 0%,100%{height:5px} 50%{height:20px} }
+    @keyframes ripple { 0%{box-shadow:0 0 0 0 rgba(252,92,101,0.4)} 70%{box-shadow:0 0 0 18px rgba(252,92,101,0)} 100%{box-shadow:0 0 0 0 rgba(252,92,101,0)} }
+
+    .app { display:flex; height:100vh; height:100dvh; position:relative; z-index:1; }
+
+    /* ── SIDEBAR ── */
+    .sidebar { width:240px; min-width:240px; background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:24px 0; }
+    .logo { padding:0 22px 24px; border-bottom:1px solid var(--border); }
+    .logo-name { font-family:'Syne',sans-serif; font-size:21px; font-weight:800; background:linear-gradient(90deg,var(--accent),var(--accent2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    .logo-tag  { font-size:10px; color:var(--muted); margin-top:2px; letter-spacing:1.2px; text-transform:uppercase; }
+    .nav { padding:18px 10px; flex:1; }
+    .nav-btn { width:100%; display:flex; align-items:center; gap:11px; padding:11px 14px; border-radius:10px; background:none; border:none; color:var(--muted); font-family:'DM Sans',sans-serif; font-size:14px; font-weight:500; cursor:pointer; transition:all .2s; text-align:left; margin-bottom:4px; }
+    .nav-btn:hover { background:var(--surface2); color:var(--text); }
+    .nav-btn.active { background:rgba(99,179,237,0.1); color:var(--accent); }
+    .nav-btn .icon { font-size:17px; width:20px; text-align:center; }
+    .sidebar-footer { padding:14px 22px; border-top:1px solid var(--border); font-size:12px; color:var(--muted); line-height:1.7; }
+    .sidebar-footer .name { color:var(--accent); font-weight:600; }
+
+    /* ── MAIN ── */
+    .main { flex:1; display:flex; flex-direction:column; overflow:hidden; min-width:0; }
+
+    /* ── HEADER ── */
+    .header { padding:14px 26px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:rgba(14,19,32,0.7); backdrop-filter:blur(12px); position:relative; z-index:20; flex-shrink:0; }
+    .header-left { display:flex; align-items:center; gap:10px; }
+    .header-title { font-family:'Syne',sans-serif; font-size:15px; font-weight:700; }
+    .status-dot  { width:7px; height:7px; border-radius:50%; background:#48bb78; box-shadow:0 0 6px #48bb78; display:inline-block; animation:pulse 2s infinite; }
+    .status-text { font-size:12px; color:var(--muted); }
+
+    /* Mobile mode switcher */
+    .mode-switcher { display:none; position:relative; }
+    .mode-switcher-btn { display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:7px 12px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:14px; font-weight:500; cursor:pointer; transition:border-color .2s; }
+    .mode-switcher-btn.open { border-color:var(--accent); }
+    .arrow { font-size:10px; color:var(--muted); transition:transform .2s; }
+    .mode-switcher-btn.open .arrow { transform:rotate(180deg); }
+    .mode-dropdown { position:absolute; top:calc(100% + 6px); left:0; background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; min-width:160px; box-shadow:0 8px 32px rgba(0,0,0,0.4); opacity:0; transform:translateY(-6px) scale(0.97); pointer-events:none; transition:all .18s ease; z-index:100; }
+    .mode-dropdown.open { opacity:1; transform:translateY(0) scale(1); pointer-events:all; }
+    .mode-option { display:flex; align-items:center; gap:10px; padding:12px 16px; cursor:pointer; font-size:14px; color:var(--muted); transition:all .15s; border-bottom:1px solid var(--border); }
+    .mode-option:last-child { border-bottom:none; }
+    .mode-option:active,.mode-option:hover { background:var(--surface2); color:var(--text); }
+    .mode-option.selected { color:var(--accent); }
+    .micon { font-size:17px; }
+
+    /* ── PANELS ── */
+    .panel { display:none; flex:1; flex-direction:column; overflow:hidden; }
+    .panel.active { display:flex; }
+
+    /* ── TEXT CHAT ── */
+    .chat-messages { flex:1; overflow-y:auto; padding:22px 24px; display:flex; flex-direction:column; gap:16px; scroll-behavior:smooth; -webkit-overflow-scrolling:touch; }
+    .chat-messages::-webkit-scrollbar { width:4px; }
+    .chat-messages::-webkit-scrollbar-thumb { background:var(--border); border-radius:4px; }
+    .msg { display:flex; gap:10px; animation:fadeUp .28s ease; }
+    .msg.user { flex-direction:row-reverse; }
+    .avatar { width:32px; height:32px; min-width:32px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-weight:700; }
+    .avatar.ai   { background:linear-gradient(135deg,var(--accent),var(--accent2)); font-family:'Syne',sans-serif; font-size:11px; color:#fff; }
+    .avatar.user { background:var(--surface2); font-size:16px; }
+    .bubble { max-width:70%; padding:12px 16px; border-radius:16px; font-size:14px; line-height:1.65; word-break:break-word; }
+    .msg.ai   .bubble { background:var(--bubble-ai); border:1px solid var(--border); border-top-left-radius:4px; }
+    .msg.user .bubble { background:var(--bubble-user); border:1px solid rgba(99,179,237,0.15); border-top-right-radius:4px; }
+    .typing-bubble { display:flex; gap:5px; align-items:center; padding:12px 16px; }
+    .dot { width:6px; height:6px; border-radius:50%; background:var(--muted); animation:bounce 1.2s infinite; }
+    .dot:nth-child(2){animation-delay:.2s} .dot:nth-child(3){animation-delay:.4s}
+
+    /* Voice label badge on chat bubbles */
+    .voice-tag { display:inline-flex; align-items:center; gap:4px; font-size:10px; color:var(--accent2); background:rgba(159,122,234,0.1); border:1px solid rgba(159,122,234,0.2); border-radius:20px; padding:2px 7px; margin-bottom:5px; font-weight:600; letter-spacing:.4px; }
+
+    .welcome { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 24px; }
+    .welcome-logo { font-family:'Syne',sans-serif; font-size:48px; font-weight:800; background:linear-gradient(135deg,var(--accent),var(--accent2),var(--gold)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin-bottom:10px; }
+    .welcome-sub { font-size:15px; color:var(--muted); margin-bottom:28px; font-weight:300; }
+    .suggestions { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; max-width:500px; }
+    .suggestion { background:var(--surface2); border:1px solid var(--border); border-radius:9px; padding:8px 13px; font-size:13px; color:var(--muted); cursor:pointer; transition:all .2s; }
+    .suggestion:hover,.suggestion:active { border-color:var(--accent); color:var(--accent); }
+
+    .chat-input-area { padding:12px 20px calc(12px + var(--safe-bottom)); border-top:1px solid var(--border); background:rgba(14,19,32,0.85); backdrop-filter:blur(12px); flex-shrink:0; }
+    .input-box { display:flex; align-items:flex-end; gap:9px; background:var(--surface2); border:1px solid var(--border); border-radius:14px; padding:9px 11px; transition:border-color .2s; }
+    .input-box:focus-within { border-color:rgba(99,179,237,0.4); }
+    #chatInput { flex:1; background:none; border:none; outline:none; color:var(--text); font-family:'DM Sans',sans-serif; font-size:15px; resize:none; max-height:100px; line-height:1.5; -webkit-appearance:none; }
+    #chatInput::placeholder { color:var(--muted); }
+    .send-btn { width:38px; height:38px; min-width:38px; border-radius:10px; background:linear-gradient(135deg,var(--accent),var(--accent2)); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:opacity .2s,transform .15s; }
+    .send-btn:active { transform:scale(0.92); }
+    .send-btn:disabled { opacity:.4; cursor:not-allowed; }
+    .send-btn svg { width:15px; height:15px; fill:white; }
+    .input-hint { font-size:11px; color:var(--muted); margin-top:6px; text-align:center; }
+
+    /* ── VOICE PANEL ── */
+    #panelVoice { flex-direction:column; align-items:center; justify-content:center; gap:28px; padding:36px 24px; overflow-y:auto; }
+
+    .voice-ctrl-title { font-family:'Syne',sans-serif; font-size:22px; font-weight:800; background:linear-gradient(90deg,var(--accent),var(--accent2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; text-align:center; }
+    .browser-note { font-size:11.5px; color:var(--muted); text-align:center; background:rgba(99,179,237,0.05); border:1px solid var(--border); border-radius:8px; padding:8px 14px; max-width:460px; width:100%; }
+
+    /* Voice selector */
+    .voice-selector-wrap { width:100%; max-width:460px; }
+    .voice-selector-label { font-size:10px; color:var(--muted); letter-spacing:1.2px; text-transform:uppercase; text-align:center; margin-bottom:10px; }
+    .voice-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:8px; }
+    .voice-card { background:var(--surface2); border:1.5px solid var(--border); border-radius:11px; padding:10px 6px; text-align:center; cursor:pointer; transition:all .2s; }
+    .voice-card:hover,.voice-card:active { border-color:var(--accent); }
+    .voice-card.selected { border-color:var(--accent); background:rgba(99,179,237,0.08); }
+    .voice-card .vgender { font-size:18px; margin-bottom:3px; }
+    .voice-card .vname   { font-size:10px; color:var(--muted); font-weight:500; }
+    .voice-card.selected .vname { color:var(--accent); }
+
+    /* Mic */
+    .mic-area { display:flex; flex-direction:column; align-items:center; gap:14px; }
+    .mic-ring { width:96px; height:96px; border-radius:50%; background:var(--surface2); border:2px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all .25s; user-select:none; }
+    .mic-ring:hover { border-color:var(--accent); box-shadow:0 0 24px rgba(99,179,237,0.15); }
+    .mic-ring.recording { border-color:var(--danger); animation:ripple 1.2s infinite; }
+    .mic-icon   { font-size:34px; pointer-events:none; }
+    .mic-status { font-size:13px; color:var(--muted); text-align:center; }
+
+    .wave-bars { display:flex; gap:4px; align-items:flex-end; height:26px; justify-content:center; }
+    .wave-bars.hidden { visibility:hidden; }
+    .bar { width:4px; border-radius:3px; background:var(--accent); animation:wave .8s infinite ease-in-out; }
+    .bar:nth-child(2){animation-delay:.1s}.bar:nth-child(3){animation-delay:.2s}.bar:nth-child(4){animation-delay:.3s}.bar:nth-child(5){animation-delay:.4s}
+
+    /* 👇 "See your chat in Text Chat" hint banner */
+    .voice-chat-hint {
+      display:flex; align-items:center; gap:10px;
+      background:rgba(99,179,237,0.06); border:1px solid rgba(99,179,237,0.2);
+      border-radius:12px; padding:13px 18px; max-width:460px; width:100%;
+      cursor:pointer; transition:all .2s;
+    }
+    .voice-chat-hint:hover { background:rgba(99,179,237,0.1); border-color:rgba(99,179,237,0.35); }
+    .voice-chat-hint .hint-icon { font-size:22px; flex-shrink:0; }
+    .voice-chat-hint .hint-text { font-size:13px; line-height:1.5; color:var(--muted); }
+    .voice-chat-hint .hint-text strong { color:var(--accent); font-weight:600; }
+    .voice-chat-hint .hint-arrow { font-size:18px; color:var(--accent); margin-left:auto; flex-shrink:0; }
+
+    .stop-btn { display:flex; align-items:center; gap:7px; background:none; border:1.5px solid var(--danger); color:var(--danger); font-size:13px; font-weight:600; border-radius:10px; padding:9px 20px; cursor:pointer; transition:all .2s; font-family:'DM Sans',sans-serif; }
+    .stop-btn:hover,.stop-btn:active { background:rgba(252,92,101,0.1); }
+    .stop-btn:disabled { border-color:var(--border); color:var(--muted); cursor:not-allowed; background:none; opacity:0.5; }
+
+    /* ── MOBILE ── */
+    @media (max-width:768px) {
+      .sidebar { display:none; }
+      .header-title { display:none; }
+      .input-hint { display:none; }
+      .status-text { display:none; }
+      .mode-switcher { display:block; }
+      .app { height:100dvh; flex-direction:column; }
+      .header { padding:10px 14px; }
+      .chat-messages { padding:14px; }
+      .bubble { max-width:88%; font-size:14.5px; }
+      .welcome { padding:24px 16px; }
+      .welcome-logo { font-size:34px; }
+      .welcome-sub  { font-size:14px; margin-bottom:20px; }
+      .suggestion   { font-size:12.5px; padding:7px 11px; }
+      .chat-input-area { padding:10px 12px calc(10px + var(--safe-bottom)); }
+      #chatInput { font-size:16px; }
+
+      /* Voice panel on mobile: centered column */
+      #panelVoice { padding:24px 16px; gap:20px; }
+      .voice-ctrl-title { font-size:18px; }
+      /* 3 cols on mobile instead of 6 */
+      .voice-grid { grid-template-columns:repeat(3,1fr); }
+      .voice-card .vgender { font-size:20px; }
+      .voice-card .vname   { font-size:11px; }
+      .mic-ring { width:86px; height:86px; }
+      .mic-icon { font-size:30px; }
+      .voice-chat-hint { padding:11px 14px; }
+      .voice-chat-hint .hint-text { font-size:12.5px; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- SIDEBAR (desktop) -->
+  <div class="sidebar">
+    <div class="logo">
+      <div class="logo-name">Suhail AI</div>
+      <div class="logo-tag">Intelligent Assistant</div>
+    </div>
+    <nav class="nav">
+      <button class="nav-btn active" onclick="switchPanel('chat',this)">
+        <span class="icon">💬</span> Text Chat
+      </button>
+      <button class="nav-btn" onclick="switchPanel('voice',this)">
+        <span class="icon">🎙️</span> Voice Chat
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      Developed by <span class="name">Mohd Suhail</span><br/>
+      Software Engineer · AI & ML
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="header">
+      <div class="header-left">
+
+        <!-- Mobile mode switcher -->
+        <div class="mode-switcher" id="modeSwitcher">
+          <button class="mode-switcher-btn" id="modeSwitcherBtn" onclick="toggleModeDropdown()">
+            <span id="modeIcon">💬</span>
+            <span id="modeLabel">Text Chat</span>
+            <span class="arrow">▾</span>
+          </button>
+          <div class="mode-dropdown" id="modeDropdown">
+            <div class="mode-option selected" id="optChat" onclick="selectMode('chat')">
+              <span class="micon">💬</span> Text Chat
+            </div>
+            <div class="mode-option" id="optVoice" onclick="selectMode('voice')">
+              <span class="micon">🎙️</span> Voice Chat
+            </div>
+          </div>
+        </div>
+
+        <div class="header-title" id="headerTitle">Text Chat</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="status-dot"></span>
+        <span class="status-text">Online</span>
+      </div>
+    </div>
+
+    <!-- ══ TEXT CHAT PANEL ══ -->
+    <div class="panel active" id="panelChat">
+      <div class="chat-messages" id="chatMessages">
+        <div class="welcome" id="welcome">
+          <div class="welcome-logo">Suhail AI</div>
+          <div class="welcome-sub">Your intelligent personal assistant.<br>Ask me anything.</div>
+          <div class="suggestions">
+            <div class="suggestion" onclick="fillSuggestion(this)">Who made you?</div>
+            <div class="suggestion" onclick="fillSuggestion(this)">Explain machine learning</div>
+            <div class="suggestion" onclick="fillSuggestion(this)">Write a Python script</div>
+            <div class="suggestion" onclick="fillSuggestion(this)">Tell me something cool</div>
+            <div class="suggestion" onclick="fillSuggestion(this)">Help me brainstorm</div>
+            <div class="suggestion" onclick="fillSuggestion(this)">What can you do?</div>
+          </div>
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <div class="input-box">
+          <textarea id="chatInput" rows="1" placeholder="Message Suhail AI..."></textarea>
+          <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+            <svg viewBox="0 0 24 24"><path d="M2 21L23 12 2 3v7l15 2-15 2v7z"/></svg>
+          </button>
+        </div>
+        <div class="input-hint">Enter to send · Shift+Enter for new line</div>
+      </div>
+    </div>
+
+    <!-- ══ VOICE PANEL ══ -->
+    <div class="panel" id="panelVoice">
+
+      <div class="voice-ctrl-title">🎙️ Voice Mode</div>
+
+      <div class="browser-note">🔊 Uses your browser's built-in mic & voices · Best on Chrome</div>
+
+      <!-- Voice selector -->
+      <div class="voice-selector-wrap">
+        <div class="voice-selector-label">Choose AI Voice</div>
+        <div class="voice-grid">
+          <div class="voice-card selected" data-voice-index="0" onclick="selectVoice(this)"><div class="vgender">👨</div><div class="vname">Male 1</div></div>
+          <div class="voice-card" data-voice-index="1" onclick="selectVoice(this)"><div class="vgender">🧔</div><div class="vname">Male 2</div></div>
+          <div class="voice-card" data-voice-index="2" onclick="selectVoice(this)"><div class="vgender">👴</div><div class="vname">Male 3</div></div>
+          <div class="voice-card" data-voice-index="3" onclick="selectVoice(this)"><div class="vgender">👩</div><div class="vname">Female 1</div></div>
+          <div class="voice-card" data-voice-index="4" onclick="selectVoice(this)"><div class="vgender">👧</div><div class="vname">Female 2</div></div>
+          <div class="voice-card" data-voice-index="5" onclick="selectVoice(this)"><div class="vgender">🧕</div><div class="vname">Female 3</div></div>
+        </div>
+      </div>
+
+      <!-- Mic -->
+      <div class="mic-area">
+        <div class="mic-ring" id="micRing" onclick="toggleRecording()">
+          <span class="mic-icon" id="micIcon">🎤</span>
+        </div>
+        <div class="mic-status" id="micStatus">Tap the mic to start speaking</div>
+      </div>
+
+      <div class="wave-bars hidden" id="waveBars">
+        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+        <div class="bar"></div><div class="bar"></div>
+      </div>
+
+      <!-- ✅ Hint banner — clicking it goes to Text Chat -->
+      <div class="voice-chat-hint" onclick="goToTextChat()">
+        <span class="hint-icon">💬</span>
+        <div class="hint-text">
+          <strong>View your voice conversation in Text Chat</strong><br>
+          All voice messages appear there automatically. Tap to switch.
+        </div>
+        <span class="hint-arrow">→</span>
+      </div>
+
+      <button class="stop-btn" id="stopBtn" onclick="stopSpeaking()" disabled>⏹ Stop Speaking</button>
+
+    </div><!-- end panelVoice -->
+  </div><!-- end main -->
+</div>
+
+<script>
+function escapeHtml(t){ return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+const isMobile = () => window.innerWidth <= 768;
+
+// Close dropdown when clicking outside
+document.addEventListener('click', e => {
+  if (!document.getElementById('modeSwitcher')?.contains(e.target)) closeModeDropdown();
+});
+
+// ── MODE SWITCHER (mobile) ──
+function toggleModeDropdown(){
+  const dd=document.getElementById('modeDropdown'), btn=document.getElementById('modeSwitcherBtn');
+  const open=dd.classList.toggle('open'); btn.classList.toggle('open',open);
+}
+function closeModeDropdown(){
+  document.getElementById('modeDropdown').classList.remove('open');
+  document.getElementById('modeSwitcherBtn').classList.remove('open');
+}
+function selectMode(name){
+  closeModeDropdown();
+  switchPanel(name,null);
+  document.getElementById('modeIcon').textContent  = name==='chat'?'💬':'🎙️';
+  document.getElementById('modeLabel').textContent = name==='chat'?'Text Chat':'Voice Chat';
+  document.getElementById('optChat').classList.toggle('selected',  name==='chat');
+  document.getElementById('optVoice').classList.toggle('selected', name==='voice');
+}
+
+// ── PANEL SWITCH ──
+function switchPanel(name, btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel'+name.charAt(0).toUpperCase()+name.slice(1)).classList.add('active');
+  if(btn) btn.classList.add('active');
+  document.getElementById('headerTitle').textContent = name==='chat'?'Text Chat':'Voice Chat';
+}
+
+// Clicking hint banner → go to text chat
+function goToTextChat(){
+  switchPanel('chat', document.querySelector('.nav-btn'));
+  // also sync mobile dropdown
+  document.getElementById('modeIcon').textContent  = '💬';
+  document.getElementById('modeLabel').textContent = 'Text Chat';
+  document.getElementById('optChat').classList.add('selected');
+  document.getElementById('optVoice').classList.remove('selected');
+}
+
+// ── TEXT CHAT ──
+let messages=[], welcomeShown=true;
+const chatInput=document.getElementById('chatInput');
+const sendBtn=document.getElementById('sendBtn');
+const chatEl=document.getElementById('chatMessages');
+
+chatInput.addEventListener('keydown', e=>{
+  if(e.key==='Enter'&&!e.shiftKey&&!isMobile()){e.preventDefault();sendMessage();}
+});
+chatInput.addEventListener('input',()=>{
+  chatInput.style.height='auto';
+  chatInput.style.height=Math.min(chatInput.scrollHeight,100)+'px';
+});
+function fillSuggestion(el){ chatInput.value=el.textContent; sendMessage(); }
+function removeWelcome(){ if(welcomeShown){document.getElementById('welcome')?.remove();welcomeShown=false;} }
+
+function addMessage(role, text, isVoice=false){
+  removeWelcome();
+  const div=document.createElement('div');
+  div.className='msg '+role;
+  const av=role==='ai'?'<div class="avatar ai">S</div>':'<div class="avatar user">🧑</div>';
+  const voiceTag = isVoice ? '<div class="voice-tag">🎙️ Voice</div>' : '';
+  div.innerHTML=`${av}<div class="bubble">${voiceTag}${escapeHtml(text).replace(/\n/g,'<br>')}</div>`;
+  chatEl.appendChild(div);
+  chatEl.scrollTop=chatEl.scrollHeight;
+}
+
+function addTyping(){
+  removeWelcome();
+  const div=document.createElement('div');
+  div.className='msg ai'; div.id='typingIndicator';
+  div.innerHTML=`<div class="avatar ai">S</div><div class="bubble typing-bubble"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
+  chatEl.appendChild(div);
+  chatEl.scrollTop=chatEl.scrollHeight;
+}
+
+async function sendMessage(){
+  const text=chatInput.value.trim(); if(!text) return;
+  chatInput.value=''; chatInput.style.height='auto';
+  sendBtn.disabled=true;
+  addMessage('user',text); messages.push({role:'user',content:text}); addTyping();
+  try {
+    const res=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages})});
+    const data=await res.json();
+    document.getElementById('typingIndicator')?.remove();
+    const reply=data.reply||'Sorry, something went wrong.';
+    addMessage('ai',reply); messages.push({role:'assistant',content:reply});
+  } catch {
+    document.getElementById('typingIndicator')?.remove();
+    addMessage('ai','Connection error. Please try again.');
+  }
+  sendBtn.disabled=false;
+  chatInput.focus();
+}
+
+// ── VOICE ──
+let selectedVoiceIndex=0, voiceMsgHistory=[], isRecording=false, recognition=null;
+
+function loadVoices(){
+  const all=window.speechSynthesis.getVoices(); if(!all.length) return;
+  const mk=['male','man','david','james','mark','daniel','alex'];
+  const fk=['female','woman','samantha','victoria','karen','moira','fiona'];
+  let m=all.filter(v=>mk.some(k=>v.name.toLowerCase().includes(k)));
+  let f=all.filter(v=>fk.some(k=>v.name.toLowerCase().includes(k)));
+  if(m.length<3) m=all.slice(0,Math.ceil(all.length/2));
+  if(f.length<3) f=all.slice(Math.ceil(all.length/2));
+  window._voiceList=[m[0]||all[0],m[1]||all[0],m[2]||all[0],f[0]||all[1]||all[0],f[1]||all[2]||all[0],f[2]||all[3]||all[0]];
+  document.querySelectorAll('.voice-card').forEach((card,i)=>{
+    const v=window._voiceList[i];
+    if(v) card.querySelector('.vname').textContent=v.name.split(' ')[0]+(i<3?' · M':' · F');
+  });
+}
+window.speechSynthesis.onvoiceschanged=loadVoices; loadVoices();
+
+function selectVoice(el){
+  document.querySelectorAll('.voice-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected'); selectedVoiceIndex=parseInt(el.dataset.voiceIndex);
+}
+
+function setStopBtn(active){
+  const btn=document.getElementById('stopBtn');
+  btn.disabled=!active;
+}
+
+function stopSpeaking(){
+  window.speechSynthesis.cancel();
+  document.getElementById('waveBars').classList.add('hidden');
+  document.getElementById('micStatus').textContent='Stopped. Tap the mic to speak again';
+  document.getElementById('micIcon').textContent='🎤';
+  setStopBtn(false);
+}
+
+function speak(text){
+  return new Promise(resolve=>{
+    window.speechSynthesis.cancel();
+    const utter=new SpeechSynthesisUtterance(text);
+    const voices=window._voiceList||[];
+    if(voices[selectedVoiceIndex]) utter.voice=voices[selectedVoiceIndex];
+    utter.rate=1; utter.pitch=1;
+    document.getElementById('waveBars').classList.remove('hidden');
+    setStopBtn(true);
+    const done=()=>{ document.getElementById('waveBars').classList.add('hidden'); setStopBtn(false); resolve(); };
+    utter.onend=done; utter.onerror=done;
+    window.speechSynthesis.speak(utter);
+  });
+}
+
+function toggleRecording(){ if(isRecording) stopRecording(); else startRecording(); }
+
+function startRecording(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){ document.getElementById('micStatus').textContent='Not supported. Use Chrome.'; return; }
+  recognition=new SR();
+  recognition.lang='en-US'; recognition.interimResults=false; recognition.maxAlternatives=1;
+
+  recognition.onresult=async(e)=>{
+    const userText=e.results[0][0].transcript;
+    stopRecording();
+
+    // Add user voice message to TEXT CHAT (with voice tag)
+    const userDiv=document.createElement('div');
+    userDiv.className='msg user voice-msg-item';
+    userDiv.innerHTML=`<div class="avatar user">🧑</div><div class="bubble"><div class="voice-tag">🎙️ Voice</div>${escapeHtml(userText)}</div>`;
+    removeWelcome(); chatEl.appendChild(userDiv); chatEl.scrollTop=chatEl.scrollHeight;
+
+    voiceMsgHistory.push({role:'user',content:userText});
+    document.getElementById('micStatus').textContent='Suhail AI is thinking...';
+    document.getElementById('micIcon').textContent='⏳';
+
+    // Typing indicator in chat
+    addTyping();
+
+    try {
+      const res=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:voiceMsgHistory})});
+      const data=await res.json();
+      document.getElementById('typingIndicator')?.remove();
+      const reply=data.reply||'Sorry, I could not respond.';
+      voiceMsgHistory.push({role:'assistant',content:reply});
+
+      // Add AI reply to TEXT CHAT (with voice tag)
+      const aiDiv=document.createElement('div');
+      aiDiv.className='msg ai voice-msg-item';
+      aiDiv.innerHTML=`<div class="avatar ai">S</div><div class="bubble"><div class="voice-tag">🎙️ Voice</div>${escapeHtml(reply).replace(/\n/g,'<br>')}</div>`;
+      chatEl.appendChild(aiDiv); chatEl.scrollTop=chatEl.scrollHeight;
+
+      document.getElementById('micStatus').textContent='Speaking...';
+      await speak(reply);
+      document.getElementById('micStatus').textContent='Tap the mic to speak again';
+      document.getElementById('micIcon').textContent='🎤';
+    } catch {
+      document.getElementById('typingIndicator')?.remove();
+      document.getElementById('micStatus').textContent='Error. Please try again.';
+      document.getElementById('micIcon').textContent='🎤';
+    }
+  };
+
+  recognition.onerror=(e)=>{
+    stopRecording();
+    document.getElementById('micStatus').textContent='Error: '+e.error;
+    document.getElementById('micIcon').textContent='🎤';
+  };
+
+  recognition.start(); isRecording=true;
+  document.getElementById('micRing').classList.add('recording');
+  document.getElementById('micIcon').textContent='⏹️';
+  document.getElementById('micStatus').textContent='Listening... speak now';
+}
+
+function stopRecording(){
+  recognition?.stop(); isRecording=false;
+  document.getElementById('micRing').classList.remove('recording');
+}
+</script>
+</body>
+</html>

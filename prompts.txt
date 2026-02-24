@@ -1,0 +1,50 @@
+# 1st PROMPT:-
+
+Project: Suhail AI — Personal Chatbot
+Language: Python
+Overview:
+Build a personal AI chatbot named "Suhail AI" with a premium, professional frontend (similar to leading AI chat products). The chatbot should be powered by an existing API key provided by the user.
+
+Core Features:
+1. Text Chat Mode
+
+A clean, professional chat interface where users can type their messages
+The bot reads the input and replies intelligently based on the user's need
+Smooth conversation flow with chat history
+
+2. Voice Chat Mode
+
+A dedicated voice chat section where the user can speak to the bot
+The bot listens to the user's voice input (speech-to-text)
+The bot replies back in voice (text-to-speech)
+6 different AI voices available — 3 Male and 3 Female — which the user can choose from within the voice mode
+
+3. Identity Response
+
+When a user asks "Who made you?", "Who is your developer?", "Who created you?" or anything similar, the bot should reply with:
+
+Developer name: Mohd Suhail
+He is a Software Engineer who is learning AI and ML
+Add attractive lines like: "Crafted with passion and precision by a rising tech mind who is shaping the future of intelligent systems" — or similar professional lines
+
+
+
+
+Frontend Design:
+
+Premium, modern UI — dark themed or gradient based (like ChatGPT, Gemini, etc.)
+Smooth animations and transitions
+Separate sections for Text Chat and Voice Chat
+Voice selector UI (showing 6 voice options with labels — Male 1, Male 2, Male 3, Female 1, Female 2, Female 3)
+Microphone button for voice input
+Clean message bubbles for chat display
+Branded with the name "Suhail AI" prominently
+
+
+Tech Stack (Python-based):
+
+Backend/Logic: Python
+Frontend: Can use Tkinter, PyQt5, or a web-based approach using Flask/FastAPI + HTML/CSS/JS served through Python
+Speech-to-Text: SpeechRecognition library or Whisper API
+Text-to-Speech: pyttsx3, gTTS, or ElevenLabs API for multiple AI voices
+AI Model: Connected via the user's existing API key (e.g., OpenAI, Anthropic, etc.)
