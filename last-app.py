@@ -1,19 +1,18 @@
 from flask import Flask, render_template, request, jsonify
 from openai import OpenAI
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
 
 app = Flask(__name__)
 
-API_KEY = os.getenv("OPENROUTER_API_KEY")
+# =============================================
+# CONFIGURE YOUR OPENROUTER API KEY HERE
+# =============================================
+API_KEY = "put-api-key"  # <-- Replace with your sk-or-v1-... key
 
 client = OpenAI(
     api_key=API_KEY,
     base_url="https://openrouter.ai/api/v1",
     default_headers={
-        "HTTP-Referer": "https://suhail-ai.onrender.com",
+        "HTTP-Referer": "http://localhost:5000",
         "X-Title": "Suhail AI",
     }
 )
@@ -47,4 +46,4 @@ def chat():
 
 
 if __name__ == "__main__":
-    app.run(debug=False, port=5000)
+    app.run(debug=True, port=5000)
